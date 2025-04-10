@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useCardStore from '../store/useCardStore';
-import useWebcamStore from '../store/useWebcamStore';
 import { categories } from '../assets/categories';
 
 // Import Srpanch font
@@ -22,7 +21,10 @@ const Regie = () => {
   const [numDropdowns, setNumDropdowns] = useState(0);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const videoRef = useRef(null);
-  const { setWebcamStream } = useWebcamStore();
+  const peerConnectionRef = useRef(null);
+  const dataChannelRef = useRef(null);
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const wsRef = useRef(null);
 
   const handleActorChange = (e, actor) => {
     setActor(actor, e.target.value);
@@ -59,10 +61,17 @@ const Regie = () => {
 
   useEffect(() => {
     let stream = null;
+    let pc = null;
+    let ws = null;
 
     const startWebcam = async () => {
       try {
-        console.log('Requesting webcam access...');
+        // Check if mediaDevices is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Webcam access is not supported in this browser or environment');
+        }
+
+        // Request webcam access
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: {
             width: { ideal: 1280 },
@@ -71,46 +80,146 @@ const Regie = () => {
           },
           audio: true 
         });
-        console.log('Webcam stream obtained:', stream);
         
         if (videoRef.current) {
-          console.log('Setting stream to video element');
           videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+          try {
+            await videoRef.current.play();
+            console.log('Webcam started successfully');
+          } catch (playError) {
+            console.error('Error playing webcam stream:', playError);
+            // If autoplay is blocked, wait for user interaction
+            if (playError.name === 'NotAllowedError') {
+              const playOnInteraction = () => {
+                videoRef.current.play()
+                  .then(() => {
+                    console.log('Webcam started after user interaction');
+                    document.removeEventListener('click', playOnInteraction);
+                  })
+                  .catch(err => console.error('Error playing after interaction:', err));
+              };
+              document.addEventListener('click', playOnInteraction);
+            }
+          }
         }
+
+        // Connect to signaling server
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsHost = window.location.hostname;
+        const wsPort = '8080';
+        const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}`;
         
-        console.log('Storing stream in store');
-        setWebcamStream(stream);
+        console.log('Connecting to WebSocket at:', wsUrl);
+        ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          console.log('Connected to signaling server');
+          setConnectionStatus('connecting');
+          // Register as the offerer
+          ws.send(JSON.stringify({
+            type: 'register',
+            clientId: 'regie'
+          }));
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          setConnectionStatus('error');
+        };
+
+        ws.onclose = () => {
+          console.log('WebSocket connection closed');
+          setConnectionStatus('disconnected');
+        };
+
+        ws.onmessage = async (event) => {
+          console.log('Received message:', event.data);
+          const message = JSON.parse(event.data);
+          if (message.type === 'signal') {
+            const data = message.data;
+            if (data.type === 'answer') {
+              console.log('Received answer');
+              await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            } else if (data.type === 'ice-candidate') {
+              console.log('Received ICE candidate');
+              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+          }
+        };
+
+        // Initialize WebRTC connection
+        pc = new RTCPeerConnection({
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' }
+          ]
+        });
+
+        // Add webcam tracks to the connection
+        stream.getTracks().forEach(track => {
+          pc.addTrack(track, stream);
+        });
+
+        // Handle ICE candidates
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            console.log('Sending ICE candidate');
+            ws.send(JSON.stringify({
+              type: 'signal',
+              targetId: 'show',
+              data: {
+                type: 'ice-candidate',
+                candidate: event.candidate
+              }
+            }));
+          }
+        };
+
+        pc.onconnectionstatechange = () => {
+          console.log('Connection state changed:', pc.connectionState);
+          setConnectionStatus(pc.connectionState);
+        };
+
+        pc.oniceconnectionstatechange = () => {
+          console.log('ICE connection state changed:', pc.iceConnectionState);
+        };
+
+        // Create and send offer
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        console.log('Sending offer');
+        ws.send(JSON.stringify({
+          type: 'signal',
+          targetId: 'show',
+          data: {
+            type: 'offer',
+            sdp: pc.localDescription
+          }
+        }));
+
+        peerConnectionRef.current = pc;
+
       } catch (error) {
         console.error('Error accessing webcam:', error);
+        setConnectionStatus('error');
+        // Show user-friendly error message
+        alert(`Webcam access error: ${error.message}\n\nPlease make sure:\n1. You have granted camera permissions\n2. You are using HTTPS or localhost\n3. Your camera is properly connected`);
       }
     };
 
     startWebcam();
 
     return () => {
-      console.log('Cleaning up webcam stream');
       if (stream) {
-        const tracks = stream.getTracks();
-        tracks.forEach(track => {
-          console.log('Stopping track:', track.kind);
-          track.stop();
-        });
-        setWebcamStream(null);
+        stream.getTracks().forEach(track => track.stop());
+      }
+      if (pc) {
+        pc.close();
+      }
+      if (ws) {
+        ws.close();
       }
     };
-  }, []);
-
-  // Log store state changes
-  useEffect(() => {
-    const unsubscribe = useWebcamStore.subscribe(
-      (state) => state.webcamStream,
-      (newStream) => {
-        console.log('Webcam stream in store changed:', newStream);
-      }
-    );
-
-    return () => unsubscribe();
   }, []);
 
   return (
@@ -581,7 +690,7 @@ const Regie = () => {
           <button
             style={{
               padding: '12px 24px',
-              backgroundColor: '#4CAF50',
+              backgroundColor: connectionStatus === 'connected' ? '#4CAF50' : '#f44336',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -592,12 +701,11 @@ const Regie = () => {
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
               fontFamily: 'Verdana',
               ':hover': {
-                backgroundColor: '#388E3C',
                 transform: 'scale(1.05)'
               }
             }}
           >
-            Movie
+            {connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
           </button>
         </div>
         <div style={{
