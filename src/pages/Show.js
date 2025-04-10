@@ -12,7 +12,6 @@ const Show = () => {
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
   const peerConnectionRef = useRef(null);
-  const dataChannelRef = useRef(null);
   const wsRef = useRef(null);
 
   // Subscribe to store changes
@@ -40,8 +39,14 @@ const Show = () => {
           setBgVideo('/assets/movies/05-finclash.mp4');
         } else if (newState === 'Roue') {
           setBgVideo('/assets/movies/Roue 20.mp4');
-        } else if (newState === 'Category') {
+        } else if (newState.includes('Category')) {
+          const category = newState.split(':')[1];
           setBgVideo('/assets/movies/02-Annonce categorie.MP4');
+          const audio = new Audio('/assets/music/C1.mp3');
+          audio.volume = 1.0;
+          audio.play().catch(error => {
+            console.error('Error playing audio:', error);
+          });
         } else {
           setBgVideo('');
         }
@@ -69,15 +74,13 @@ const Show = () => {
 
     const setupWebRTC = async () => {
       try {
-        // Get the current host's IP address
+        // Connect to signaling server
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsHost = window.location.hostname;
-        const wsPort = '8080'; // Your WebSocket server port
-        const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}`;
+        const wsPort = '4321'; // Use the correct port
+        const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}/ws`;
         
         console.log('Connecting to WebSocket at:', wsUrl);
-        
-        // Connect to signaling server
         ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
@@ -103,27 +106,35 @@ const Show = () => {
 
         ws.onmessage = async (event) => {
           console.log('Received message:', event.data);
-          const message = JSON.parse(event.data);
-          if (message.type === 'signal') {
-            const data = message.data;
-            if (data.type === 'offer') {
-              console.log('Received offer');
-              await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-              const answer = await pc.createAnswer();
-              await pc.setLocalDescription(answer);
-              console.log('Sending answer');
-              ws.send(JSON.stringify({
-                type: 'signal',
-                targetId: 'regie',
-                data: {
-                  type: 'answer',
-                  sdp: pc.localDescription
-                }
-              }));
-            } else if (data.type === 'ice-candidate') {
-              console.log('Received ICE candidate');
-              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+          try {
+            const message = JSON.parse(event.data);
+            
+            if (message.type === 'registered') {
+              console.log('Registration confirmed:', message.clientId);
+              setConnectionStatus('connected');
+            } else if (message.type === 'signal') {
+              const data = message.data;
+              if (data.type === 'offer') {
+                console.log('Received offer');
+                await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                console.log('Sending answer');
+                ws.send(JSON.stringify({
+                  type: 'signal',
+                  targetId: 'regie',
+                  data: {
+                    type: 'answer',
+                    sdp: pc.localDescription
+                  }
+                }));
+              } else if (data.type === 'ice-candidate') {
+                console.log('Received ICE candidate');
+                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+              }
             }
+          } catch (error) {
+            console.error('Error handling message:', error);
           }
         };
 
@@ -233,41 +244,109 @@ const Show = () => {
     const ctx = canvas?.getContext('2d');
     const video = videoRef.current;
 
-    if (!canvas || !ctx || !video) return;
+    console.log('Canvas effect setup:', { canvas, ctx, video });
+
+    if (!canvas || !ctx || !video) {
+      console.error('Missing required elements:', { canvas, ctx, video });
+      return;
+    }
 
     const drawFrame = () => {
       if (video.videoWidth && video.videoHeight) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        // Set canvas size to match video
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          console.log('Canvas size updated:', { width: canvas.width, height: canvas.height });
+        }
         
         // Draw the video frame
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        console.log('Frame drawn');
         
-        // Apply effects
+        // Get the image data
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         
-        // Example effect: Invert colors
+        // Number of posterization levels
+        const levels = 4;
+        
+        // Process each pixel
         for (let i = 0; i < data.length; i += 4) {
-          data[i] = 255 - data[i];     // R
-          data[i + 1] = 255 - data[i + 1]; // G
-          data[i + 2] = 255 - data[i + 2]; // B
+          // Posterize each color channel
+          for (let j = 0; j < 3; j++) {
+            const value = data[i + j];
+            const level = Math.floor(value / (255 / levels)) * (255 / levels);
+            data[i + j] = level;
+          }
+          
+          // Increase saturation
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          
+          // Convert to HSL
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          let h, s, l = (max + min) / 2;
+          
+          if (max === min) {
+            h = s = 0;
+          } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            
+            switch (max) {
+              case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+              case g: h = (b - r) / d + 2; break;
+              case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+          }
+          
+          // Increase saturation
+          s = Math.min(1, s * 1.5);
+          
+          // Convert back to RGB
+          if (s === 0) {
+            data[i] = data[i + 1] = data[i + 2] = l * 255;
+          } else {
+            const hue2rgb = (p, q, t) => {
+              if (t < 0) t += 1;
+              if (t > 1) t -= 1;
+              if (t < 1/6) return p + (q - p) * 6 * t;
+              if (t < 1/2) return q;
+              if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+              return p;
+            };
+            
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            
+            data[i] = hue2rgb(p, q, h + 1/3) * 255;
+            data[i + 1] = hue2rgb(p, q, h) * 255;
+            data[i + 2] = hue2rgb(p, q, h - 1/3) * 255;
+          }
         }
         
         ctx.putImageData(imageData, 0, 0);
+        console.log('Effect applied');
       }
       
       animationFrameRef.current = requestAnimationFrame(drawFrame);
     };
 
+    // Start the animation loop
     drawFrame();
+    console.log('Animation loop started');
 
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+        console.log('Animation loop stopped');
       }
     };
-  }, [videoRef.current, canvasRef.current]);
+  }, []);
 
   const handleVideoError = () => {
     console.error('Error loading video:', bgVideo);
@@ -313,10 +392,14 @@ const Show = () => {
       {/* Webcam stream with canvas effects */}
       <div style={{
         position: 'absolute',
-        top: '20px',
-        right: '20px',
-        width: '320px',
-        height: '240px',
+        top: '50%',
+        left: '50%',
+        minWidth: '80%',
+        minHeight: '80%',
+        width: 'auto',
+        height: 'auto',
+        opacity: 0.5,
+        transform: 'translate(-50%, -50%)',
         zIndex: 2
       }}>
         <video
@@ -325,6 +408,18 @@ const Show = () => {
           playsInline
           muted
           style={{ 
+            width: '100%',
+            height: '100%',
+            borderRadius: '8px',
+            border: '2px solid #4CAF50',
+            boxShadow: '0 0 10px rgba(76, 175, 80, 0.5)',
+            backgroundColor: '#000',
+            display: 'none' // Hide the original video
+          }}
+        />
+        <canvas
+          ref={canvasRef}
+          style={{
             width: '100%',
             height: '100%',
             borderRadius: '8px',
@@ -350,7 +445,8 @@ const Show = () => {
 
       <div style={{ 
         position: 'absolute',
-        top: '20px',
+        bottom: '20px',
+        left: '20px',
         fontSize: '24px',
         fontWeight: 'bold',
         textShadow: '0 0 10px rgba(76, 175, 80, 0.5)',

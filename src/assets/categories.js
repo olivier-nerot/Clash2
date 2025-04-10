@@ -21,7 +21,7 @@ export const categories = [
     {name:'If you know what I mean'}, //19
     {name:'Shit friday'}, //20
     {name:'Who\'s the motherfucker'}, //21
-    {name:'What\’s in the bag'}, //22
+    {name:'What\'s in the bag'}, //22
     {name:'Three monkeys'}, //23
     {name:'Say my name'}, //24
     {name:'Bachelor'}, //25
@@ -39,5 +39,6 @@ export const categories = [
     {name:'Monkeys'}, //37
     {name:'Oops ! I did it again'}, //38
     {name:'Fucking Resolution'}, //39
-    {name:'CLASHIFICATION'} //40
+    {name:'CLASHIFICATION'}, //40
+    {name:'Actor\'s Choice', value: 'actors_choice'}
   ]

@@ -22,9 +22,9 @@ const Regie = () => {
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const videoRef = useRef(null);
   const peerConnectionRef = useRef(null);
-  const dataChannelRef = useRef(null);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const wsRef = useRef(null);
+  const [volume, setVolume] = useState(1.0);
 
   const handleActorChange = (e, actor) => {
     setActor(actor, e.target.value);
@@ -48,7 +48,8 @@ const Regie = () => {
       } else if (nextIndex === numDropdowns * 3+ 1) {
         setCurrentStepName('Generique FIN');
       } else if (nextIndex % 3 === 1) {
-        setCurrentStepName('Category');
+        console.log('Current category:', selectedCategories[Math.floor(nextIndex / 3)]);
+        setCurrentStepName(`Category : ${selectedCategories[Math.floor(nextIndex / 3)]}`);
       } else if (nextIndex % 3 === 2) {
         setCurrentStepName('Applaudimetre');
       } else {
@@ -106,8 +107,8 @@ const Regie = () => {
         // Connect to signaling server
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsHost = window.location.hostname;
-        const wsPort = '8080';
-        const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}`;
+        const wsPort = '4321'; // Use the correct port
+        const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}/ws`;
         
         console.log('Connecting to WebSocket at:', wsUrl);
         ws = new WebSocket(wsUrl);
@@ -135,16 +136,24 @@ const Regie = () => {
 
         ws.onmessage = async (event) => {
           console.log('Received message:', event.data);
-          const message = JSON.parse(event.data);
-          if (message.type === 'signal') {
-            const data = message.data;
-            if (data.type === 'answer') {
-              console.log('Received answer');
-              await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-            } else if (data.type === 'ice-candidate') {
-              console.log('Received ICE candidate');
-              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+          try {
+            const message = JSON.parse(event.data);
+            
+            if (message.type === 'registered') {
+              console.log('Registration confirmed:', message.clientId);
+              setConnectionStatus('connected');
+            } else if (message.type === 'signal') {
+              const data = message.data;
+              if (data.type === 'answer') {
+                console.log('Received answer');
+                await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+              } else if (data.type === 'ice-candidate') {
+                console.log('Received ICE candidate');
+                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+              }
             }
+          } catch (error) {
+            console.error('Error handling message:', error);
           }
         };
 
@@ -157,6 +166,7 @@ const Regie = () => {
 
         // Add webcam tracks to the connection
         stream.getTracks().forEach(track => {
+          console.log('Adding track:', track.kind);
           pc.addTrack(track, stream);
         });
 
@@ -711,7 +721,9 @@ const Regie = () => {
         <div style={{
           marginTop: '20px',
           display: 'flex',
-          justifyContent: 'center'
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '20px'
         }}>
           <video
             ref={videoRef}
@@ -726,6 +738,50 @@ const Regie = () => {
               boxShadow: '0 0 10px rgba(76, 175, 80, 0.5)'
             }}
           />
+          <div style={{
+            width: '100%',
+            maxWidth: '300px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            <label style={{
+              color: '#fff',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              Volume: {Math.round(volume * 100)}%
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={(e) => {
+                const newVolume = parseFloat(e.target.value);
+                setVolume(newVolume);
+              }}
+              style={{
+                width: '100%',
+                height: '8px',
+                borderRadius: '4px',
+                background: '#333',
+                outline: 'none',
+                WebkitAppearance: 'none',
+                '::-webkit-slider-thumb': {
+                  WebkitAppearance: 'none',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: '#4CAF50',
+                  cursor: 'pointer',
+                  boxShadow: '0 0 5px rgba(0,0,0,0.3)'
+                }
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>
