@@ -1,18 +1,23 @@
 import React, { useEffect, useState, useRef } from 'react';
 import useCardStore from '../store/useCardStore';
 import '../styles/animations.css';
-
+import { roue } from '../assets/roue';
 const Show = () => {
-  const { actors, scores, currentStepName } = useCardStore();
+  const { actors, scores, currentStepName, volume } = useCardStore();
   const [isVisible, setIsVisible] = useState(false);
+  const [viewWebcam, setViewWebcam] = useState(false);
+  // const [volume, setVolume] = useState(1);
   const [bgVideo, setBgVideo] = useState("");
-  const [videoError, setVideoError] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
-  const videoRef = useRef(null);
+  const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const wsRef = useRef(null);
+  const avatarVideoRef = useRef(null);
+  const bgVideoRef = useRef(null);
+  const [isVideoLoading, setIsVideoLoading] = useState(false);
+  const [videoError, setVideoError] = useState(null);
 
   // Subscribe to store changes
   useEffect(() => {
@@ -28,45 +33,144 @@ const Show = () => {
 
   useEffect(() => {
     const unsubscribe = useCardStore.subscribe(
-      (state) => state.currentStepName,
+      (state) => state.viewWebcam,
       (newState) => {
-        console.log('Step changed to:', newState);
-        if (newState === 'Applaudimetre') {
-          setBgVideo('/assets/movies/Applaudimetre1.mp4');
-        } else if (newState === 'Generique') {
-          setBgVideo('/assets/movies/01-Intro Clash.mp4');
-        } else if (newState === 'Generique FIN') {
-          setBgVideo('/assets/movies/05-finclash.mp4');
-        } else if (newState === 'Roue') {
-          setBgVideo('/assets/movies/Roue 20.mp4');
-        } else if (newState.includes('Category')) {
-          const category = newState.split(':')[1];
-          setBgVideo('/assets/movies/02-Annonce categorie.MP4');
-          const audio = new Audio('/assets/music/C1.mp3');
-          audio.volume = 1.0;
-          audio.play().catch(error => {
-            console.error('Error playing audio:', error);
-          });
-        } else {
-          setBgVideo('');
-        }
-        setVideoError(false);
+        setViewWebcam(newState);
       }
     );
 
     return () => unsubscribe();
   }, []);
 
-  // Set volume to maximum when video changes
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.volume = 1.0;
-      videoRef.current.load(); // Force reload the video
-      videoRef.current.play().catch(error => {
-        console.error('Error playing video:', error);
-      });
-    }
-  }, [bgVideo]);
+    // const unsubscribe = useCardStore.subscribe(
+    //   (state) => state.volume,
+    //   (newState) => {
+    //     setVolume(newState);
+        if (bgVideoRef.current) {
+          bgVideoRef.current.volume = volume;
+        }
+    //   }
+    // );
+
+    // return () => unsubscribe();
+  }, [volume]);
+
+  useEffect(() => {
+    const unsubscribe = useCardStore.subscribe(
+      (state) => state.currentStepName,
+      (newState) => {
+        console.log('Step changed to:', newState);
+        // if (bgVideoRef.current) {
+        //   bgVideoRef.current.pause();
+        // }
+        
+        let videoPath = '';
+        if (newState === 'Applaudimetre') {
+          videoPath = '/assets/movies/Applaudimetre1.mp4';
+        } else if (newState === 'Generique') {
+          videoPath = '/assets/movies/01-Intro Clash.mp4';
+        } else if (newState === 'Generique FIN') {
+          videoPath = '/assets/movies/05-finclash.mp4';
+        } else if (newState === 'Roue') {
+          const randomValue = roue[Math.floor(Math.random() * roue.length)];
+          videoPath = `/assets/movies/Roue ${randomValue}.mp4`;
+        } else if (newState.includes('Category')) {
+          const category = newState.split(':')[1];
+          videoPath = '/assets/movies/02-Annonce categorie.mp4';
+
+          const audio = new Audio('/assets/music/C1.mp3');
+          audio.volume = volume;
+          audio.play().catch(error => {
+            console.error('Error playing audio:', error);
+          });
+        } else {
+          setBgVideo('');
+        }
+        
+        console.log('Setting video path:', videoPath);
+        setBgVideo(videoPath);
+        bgVideoRef.current.src = videoPath;
+        bgVideoRef.current.play();
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // Handle bgVideo changes
+  // useEffect(() => {
+  //   if (bgVideoRef.current && bgVideo) {
+  //     setIsVideoLoading(true);
+  //     setVideoError(null);
+      
+  //     const playVideo = async () => {
+  //       try {
+  //         // Ensure the video is properly configured
+  //         // bgVideoRef.current.autoplay = true;
+  //         // bgVideoRef.current.muted = true;
+  //         // bgVideoRef.current.volume = volume;
+  //         // bgVideoRef.current.loop = false;
+  //         // bgVideoRef.current.preload = 'auto';
+          
+  //         // // Set the source directly
+  //         // bgVideoRef.current.src = bgVideo;
+          
+  //         // // Make sure the video is visible
+  //         // bgVideoRef.current.style.opacity = '1';
+  //         // bgVideoRef.current.style.visibility = 'visible';
+          
+  //         // Wait for the video to be ready to play
+  //         await new Promise((resolve) => {
+  //           if (bgVideoRef.current.readyState >= 3) {
+  //             resolve();
+  //           } else {
+  //             bgVideoRef.current.addEventListener('canplaythrough', resolve, { once: true });
+  //           }
+  //         });
+          
+  //         await bgVideoRef.current.play();
+  //         setIsVideoLoading(false);
+  //       } catch (error) {
+  //         console.error('Error playing video:', error);
+  //         setVideoError(`Playback error: ${error.message}`);
+  //         setIsVideoLoading(false);
+  //       }
+  //     };
+
+  //     // Set up event listeners for video loading
+  //     const handleLoadedMetadata = () => {
+  //       setIsVideoLoading(false);
+  //     };
+
+  //     const handleError = (error) => {
+  //       console.error('Error loading video:', error);
+  //       setVideoError(`Loading error: ${bgVideoRef.current.error?.message || 'Unknown error'}`);
+  //       setIsVideoLoading(false);
+  //     };
+
+  //     // Remove any existing listeners first
+  //     bgVideoRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+  //     bgVideoRef.current.removeEventListener('error', handleError);
+
+  //     // Add new listeners
+  //     bgVideoRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
+  //     bgVideoRef.current.addEventListener('error', handleError);
+
+  //     // Try to play immediately if metadata is already loaded
+  //     if (bgVideoRef.current.readyState >= 3) {
+  //       playVideo();
+  //     }
+
+  //     // Cleanup
+  //     return () => {
+  //       if (bgVideoRef.current) {
+  //         bgVideoRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+  //         bgVideoRef.current.removeEventListener('error', handleError);
+  //       }
+  //     };
+  //   }
+  // }, [bgVideo]);
 
   useEffect(() => {
     let pc = null;
@@ -150,17 +254,17 @@ const Show = () => {
           console.log('Received track:', event.track.kind);
           if (event.track.kind === 'video') {
             console.log('Video track received, setting up video element');
-            if (videoRef.current) {
+            if (webcamRef.current) {
               // Clear any existing srcObject first
-              videoRef.current.srcObject = null;
+              webcamRef.current.srcObject = null;
               // Set the new stream
-              videoRef.current.srcObject = event.streams[0];
+              webcamRef.current.srcObject = event.streams[0];
               
               // Wait for metadata to load before attempting to play
               const playVideo = async () => {
                 try {
                   console.log('Attempting to play video');
-                  await videoRef.current.play();
+                  await webcamRef.current.play();
                   console.log('Video playing successfully');
                 } catch (error) {
                   console.error('Error playing video:', error);
@@ -169,7 +273,7 @@ const Show = () => {
                     console.log('Waiting for user interaction to play video');
                     // Add a click handler to play when user interacts
                     const playOnInteraction = () => {
-                      videoRef.current.play()
+                      webcamRef.current.play()
                         .then(() => {
                           console.log('Video started after user interaction');
                           document.removeEventListener('click', playOnInteraction);
@@ -182,8 +286,8 @@ const Show = () => {
               };
 
               // Only set up the loadedmetadata handler once
-              if (!videoRef.current.onloadedmetadata) {
-                videoRef.current.onloadedmetadata = () => {
+              if (!webcamRef.current.onloadedmetadata) {
+                webcamRef.current.onloadedmetadata = () => {
                   console.log('Video metadata loaded');
                   playVideo();
                 };
@@ -242,7 +346,7 @@ const Show = () => {
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
-    const video = videoRef.current;
+    const video = webcamRef.current;
 
     console.log('Canvas effect setup:', { canvas, ctx, video });
 
@@ -262,7 +366,6 @@ const Show = () => {
         
         // Draw the video frame
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        console.log('Frame drawn');
         
         // Get the image data
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -330,7 +433,6 @@ const Show = () => {
         }
         
         ctx.putImageData(imageData, 0, 0);
-        console.log('Effect applied');
       }
       
       animationFrameRef.current = requestAnimationFrame(drawFrame);
@@ -348,11 +450,6 @@ const Show = () => {
     };
   }, []);
 
-  const handleVideoError = () => {
-    console.error('Error loading video:', bgVideo);
-    setVideoError(true);
-  };
-
   return (
     <div style={{ 
       width: '100vw',
@@ -367,27 +464,59 @@ const Show = () => {
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {bgVideo && !videoError && (
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#000',
+        zIndex: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        {isVideoLoading && (
+          <div style={{
+            color: '#fff',
+            fontSize: '24px',
+            textAlign: 'center',
+            zIndex: 2
+          }}>
+            Loading video...
+          </div>
+        )}
+        {videoError && (
+          <div style={{
+            color: '#f44336',
+            fontSize: '24px',
+            textAlign: 'center',
+            padding: '20px',
+            zIndex: 2
+          }}>
+            Error: {videoError}
+          </div>
+        )}
         <video
-          key={bgVideo}
-          autoPlay
+          ref={bgVideoRef}
+
           playsInline
-          onError={handleVideoError}
           style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            opacity: 1,
+            backgroundColor: '#000',
             position: 'absolute',
-            top: '50%',
-            left: '50%',
-            minWidth: '100%',
-            minHeight: '100%',
-            width: 'auto',
-            height: 'auto',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 0
+            top: 0,
+            left: 0,
+            zIndex: 1,
+            visibility: 'visible'
           }}
-        >
-          <source src={bgVideo} type="video/mp4" />
-        </video>
-      )}
+        />
+      </div>
+
       
       {/* Webcam stream with canvas effects */}
       <div style={{
@@ -398,22 +527,18 @@ const Show = () => {
         minHeight: '80%',
         width: 'auto',
         height: 'auto',
-        opacity: 0.5,
+        opacity: viewWebcam ? '0.8' : '0',
+        transition: 'opacity 2s ease',
         transform: 'translate(-50%, -50%)',
         zIndex: 2
       }}>
         <video
-          ref={videoRef}
+          ref={webcamRef}
           autoPlay
           playsInline
-          muted
           style={{ 
             width: '100%',
             height: '100%',
-            borderRadius: '8px',
-            border: '2px solid #4CAF50',
-            boxShadow: '0 0 10px rgba(76, 175, 80, 0.5)',
-            backgroundColor: '#000',
             display: 'none' // Hide the original video
           }}
         />
@@ -423,8 +548,8 @@ const Show = () => {
             width: '100%',
             height: '100%',
             borderRadius: '8px',
-            border: '2px solid #4CAF50',
-            boxShadow: '0 0 10px rgba(76, 175, 80, 0.5)',
+            border: '2px solid #F00',
+            boxShadow: '0 0 20px rgba(255, 0, 0, 0.5)',
             backgroundColor: '#000'
           }}
         />
@@ -452,7 +577,7 @@ const Show = () => {
         textShadow: '0 0 10px rgba(76, 175, 80, 0.5)',
         zIndex: 1
       }}>
-        {currentStepName}
+        {currentStepName}{volume}
       </div>
       <div style={{ 
         display: 'flex',
@@ -476,19 +601,17 @@ const Show = () => {
             }}
           >
             <div style={{ flex: 1 }}>
-              <h2 style={{ 
-                color: '#fff',
-                marginBottom: '20px',
-                textAlign: 'center'
-              }}>
-                Card {num}
-              </h2>
-              <div style={{ 
-                color: '#aaa',
-                textAlign: 'center'
-              }}>
-                Content for card {num}
-              </div>
+                <video
+                  ref={avatarVideoRef}
+                  loop
+                  src={`/assets/movies/avatar-${num}.mp4`}
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                />
             </div>
             <div style={{ 
               textAlign: 'center',

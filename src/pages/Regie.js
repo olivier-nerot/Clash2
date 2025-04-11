@@ -7,8 +7,12 @@ import '../assets/font/bison.css';
 
 const Regie = () => {
   const { 
-    allCardsVisible, 
+    allCardsVisible,
+    viewWebcam,
+    volume,
     toggleAllCards, 
+    toggleViewWebcam,
+    setVolume,
     actors, 
     scores, 
     setActor, 
@@ -24,7 +28,8 @@ const Regie = () => {
   const peerConnectionRef = useRef(null);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const wsRef = useRef(null);
-  const [volume, setVolume] = useState(1.0);
+  const [timer, setTimer] = useState('59:27');
+  const [isRunning, setIsRunning] = useState(false);
 
   const handleActorChange = (e, actor) => {
     setActor(actor, e.target.value);
@@ -40,7 +45,7 @@ const Regie = () => {
 
   const handleNextCategory = () => {
     setCurrentCategoryIndex(prev => {
-      const nextIndex = prev === (numDropdowns * 3 + 1) ? 0 : prev + 1;
+      const nextIndex = prev === (numDropdowns * 3 + 2) ? 0 : prev + 1;
       
       // Set the current step name based on the index
       if (nextIndex === 0) {
@@ -427,8 +432,41 @@ const Regie = () => {
         <div style={{ 
           display: 'flex',
           justifyContent: 'center',
+          alignItems: 'center',
+          gap: '20px',
           marginBottom: '20px'
         }}>
+          <button
+            onClick={() => setIsRunning(!isRunning)}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: isRunning ? '#f44336' : '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '24px',
+              fontWeight: 'bold',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              fontFamily: 'Verdana',
+              ':hover': {
+                transform: 'scale(1.05)'
+              }
+            }}
+          >
+            {isRunning ? 'Stop' : 'Start'}
+          </button>
+          <div style={{
+            fontSize: '36px',
+            fontWeight: 'bold',
+            color: '#4CAF50',
+            textShadow: '0 0 10px rgba(76, 175, 80, 0.5)',
+            minWidth: '120px',
+            textAlign: 'center'
+          }}>
+            {timer}
+          </div>
           <button
             onClick={handleNextCategory}
             style={{
@@ -453,7 +491,7 @@ const Regie = () => {
           </button>
         </div>
         <div style={{ flex: 1 }}>
-          {Array.from({ length: numDropdowns * 3 + 2 }).map((_, index) => {
+          {Array.from({ length: numDropdowns * 3 + 3 }).map((_, index) => {
             // First item is always Generique
             if (index === 0) {
               return (
@@ -495,6 +533,44 @@ const Regie = () => {
             }
             // Last item is always Generique FIN
             if (index === numDropdowns * 3 + 1) {
+              return (
+                <div key="clash-public" style={{ 
+                  display: 'flex',
+                  gap: '10px',
+                  marginBottom: '10px',
+                  alignItems: 'center'
+                }}>
+                  <div style={{
+                    width: '30px',
+                    textAlign: 'center',
+                    color: '#4CAF50',
+                    fontWeight: 'bold'
+                  }}>
+                    {index + 1}
+                  </div>
+                  <div
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      backgroundColor: '#1e1e1e',
+                      color: '#fff',
+                      border: index === currentCategoryIndex ? '2px solid #4CAF50' : '1px solid #333',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      boxShadow: index === currentCategoryIndex ? '0 0 10px rgba(76, 175, 80, 0.5)' : 'none',
+                      textAlign: 'left',
+                      fontFamily: 'Verdana'
+                    }}
+                  >
+                    Clash public
+                  </div>
+                </div>
+              );
+            }
+            if (index === numDropdowns * 3 + 2) {
               return (
                 <div key="generique-fin" style={{ 
                   display: 'flex',
@@ -725,6 +801,47 @@ const Regie = () => {
           alignItems: 'center',
           gap: '20px'
         }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            marginBottom: '10px'
+          }}>
+            <span style={{
+              color: '#fff',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              Webcam: {viewWebcam ? 'Show' : 'Hide'}
+            </span>
+            <div
+              onClick={toggleViewWebcam}
+              style={{
+                width: '60px',
+                height: '30px',
+                backgroundColor: viewWebcam ? '#4CAF50' : '#333',
+                borderRadius: '15px',
+                position: 'relative',
+                cursor: 'pointer',
+                transition: 'background-color 0.3s ease',
+                border: '1px solid #444'
+              }}
+            >
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  backgroundColor: '#fff',
+                  borderRadius: '50%',
+                  position: 'absolute',
+                  top: '1px',
+                  left: viewWebcam ? '31px' : '1px',
+                  transition: 'left 0.3s ease',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}
+              />
+            </div>
+          </div>
           <video
             ref={videoRef}
             autoPlay
@@ -734,6 +851,7 @@ const Regie = () => {
               width: '100%',
               maxWidth: '300px',
               borderRadius: '8px',
+              opacity: viewWebcam ? '0.8' : '0',
               border: '2px solid #4CAF50',
               boxShadow: '0 0 10px rgba(76, 175, 80, 0.5)'
             }}

@@ -6,7 +6,11 @@ const useCardStore = create(
     persist(
       (set) => ({
         allCardsVisible: false,
+        viewWebcam: false,
+        volume: 1,
         toggleAllCards: () => set((state) => ({ allCardsVisible: !state.allCardsVisible })),
+        toggleViewWebcam: () => set((state) => ({ viewWebcam: !state.viewWebcam })),
+        setVolume: (volume) => set({ volume }),
         actors: {
           actor1: 'OLIVIER',
           actor2: 'NICOLAS',
@@ -51,6 +55,8 @@ const useCardStore = create(
                 const newState = JSON.parse(e.newValue);
                 useCardStore.setState({
                   allCardsVisible: newState.state.allCardsVisible,
+                  viewWebcam: newState.state.viewWebcam,
+                  volume: newState.state.volume,
                   actors: newState.state.actors,
                   scores: newState.state.scores,
                   selectedCategories: newState.state.selectedCategories,
