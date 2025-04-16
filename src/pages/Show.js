@@ -33,7 +33,6 @@ const Show = () => {
     currentStepName,
     volume,
     viewWebcam,
-    setAllCardsVisible,
     selectedActor,
     setCardVisible,
     cardVisible,
@@ -54,20 +53,17 @@ const Show = () => {
   }, [volume]);
 
   useEffect(() => { 
-    //if (!selectedActor) {
-      // setAllCardsVisible(false);
-    //}
-  const cardElements = document.querySelectorAll('.card');
-  cardElements.forEach(card => {
-    card.className = 'card card-exit';
-  });
+    const cardElements = document.querySelectorAll('.card');
+    cardElements.forEach(card => {
+      card.className = 'card card-exit';
+    });
 
-  if (selectedActor) {
-    const cardElement = document.getElementById(`card-${selectedActor}`);
-    if (cardElement) {
-      cardElement.className = 'card card-enter';
+    if (selectedActor) {
+      const cardElement = document.getElementById(`card-${selectedActor}`);
+      if (cardElement) {
+        cardElement.className = 'card card-enter';
+      }
     }
-  }
   }, [selectedActor]);
 
   const randomFuck = async () => {
@@ -83,7 +79,9 @@ const Show = () => {
   }
 
   useEffect(() => {
-    setAllCardsVisible(false);
+    setCardVisible('actor1', false);
+    setCardVisible('actor2', false);
+    setCardVisible('actor3', false);
     setClashName(null);
     setFucked(null);
     let videoPath = '';
@@ -114,7 +112,11 @@ const Show = () => {
       const audio = new Audio('/music/C1.mp3');
       audio.volume = volume;
 
-    } else {
+    } else if (currentStepName === 'Clash public') {
+      videoPath = '/movies/02-Annonce categorie.mp4';
+      setClashName('CLASH PUBLIC !!!!');
+    }
+    else {
       videoPath = '';
       return;
     }
