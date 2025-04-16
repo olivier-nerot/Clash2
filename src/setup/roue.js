@@ -9,8 +9,8 @@ export const roue = [
     "90",
     "100",
     "200",
-    "fuck1",
-    "fuck2",
-    "fuck3",
-    "fuck4",
+    "fuck",
+    "fuck",
+    "fuck",
+    "fuck",
 ]

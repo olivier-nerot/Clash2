@@ -39,4 +39,5 @@ export const categories = [
     {name:'Monkeys'},
     {name:'Oops ! I did it again'},
     {name:'Fucking Resolution'},
+    {name:'CLASH PUBLIC !!'},
 ]

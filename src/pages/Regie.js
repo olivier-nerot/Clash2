@@ -1,35 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useCardStore from '../store/useCardStore';
-import { categories } from '../assets/categories';
-
-// Import Srpanch font
-import '../assets/font/bison.css';
+import { categories } from '../setup/categories';
 
 const Regie = () => {
   const { 
-    allCardsVisible,
     viewWebcam,
     volume,
-    toggleAllCards, 
     toggleViewWebcam,
     setVolume,
     actors, 
     scores, 
     setActor, 
     updateScore, 
-    selectActor, 
     setCurrentStepName,
     selectedCategories,
-    setSelectedCategory
+    setSelectedCategory,
+    cardVisible,
+    setCardVisible,
   } = useCardStore();
   const [numDropdowns, setNumDropdowns] = useState(0);
-  const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
+  const [currentCategoryIndex, setCurrentCategoryIndex] = useState(-1);
   const videoRef = useRef(null);
-  const peerConnectionRef = useRef(null);
-  const [connectionStatus, setConnectionStatus] = useState('disconnected');
-  const wsRef = useRef(null);
   const [timer, setTimer] = useState('59:27');
   const [isRunning, setIsRunning] = useState(false);
+  const [allCardsVisible, setAllCardsVisible] = useState(false);
 
   const handleActorChange = (e, actor) => {
     setActor(actor, e.target.value);
@@ -43,21 +37,38 @@ const Regie = () => {
     setNumDropdowns(prev => prev + 1);
   };
 
+  const toggleAllCards = () => {
+    setAllCardsVisible(!allCardsVisible);
+    setTimeout(() => setCardVisible('actor1', !allCardsVisible), Math.floor(Math.random() * 2000));
+    setTimeout(() => setCardVisible('actor2', !allCardsVisible), Math.floor(Math.random() * 2000));
+    setTimeout(() => setCardVisible('actor3', !allCardsVisible), Math.floor(Math.random() * 2000));
+  };
+
   const handleNextCategory = () => {
     setCurrentCategoryIndex(prev => {
       const nextIndex = prev === (numDropdowns * 3 + 2) ? 0 : prev + 1;
       
       // Set the current step name based on the index
-      if (nextIndex === 0) {
+      if (nextIndex === -1) {
+        setCurrentStepName('');
+      } else if (nextIndex === 0) {
+        setVolume(1);
         setCurrentStepName('Generique');
       } else if (nextIndex === numDropdowns * 3+ 1) {
+        setVolume(1);
+        setCurrentStepName('Clash public');
+      } else if (nextIndex === numDropdowns * 3+ 2) {
+        setVolume(1);
         setCurrentStepName('Generique FIN');
       } else if (nextIndex % 3 === 1) {
+        setVolume(1);
         console.log('Current category:', selectedCategories[Math.floor(nextIndex / 3)]);
         setCurrentStepName(`Category : ${selectedCategories[Math.floor(nextIndex / 3)]}`);
       } else if (nextIndex % 3 === 2) {
+        setVolume(1);
         setCurrentStepName('Applaudimetre');
       } else {
+        setVolume(1);
         setCurrentStepName('Roue');
       }
       
@@ -65,19 +76,16 @@ const Regie = () => {
     });
   };
 
+  // Handle webcam stream
   useEffect(() => {
     let stream = null;
-    let pc = null;
-    let ws = null;
 
     const startWebcam = async () => {
       try {
-        // Check if mediaDevices is available
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error('Webcam access is not supported in this browser or environment');
+          throw new Error('Webcam access is not supported in this browser');
         }
 
-        // Request webcam access
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: {
             width: { ideal: 1280 },
@@ -91,15 +99,12 @@ const Regie = () => {
           videoRef.current.srcObject = stream;
           try {
             await videoRef.current.play();
-            console.log('Webcam started successfully');
           } catch (playError) {
             console.error('Error playing webcam stream:', playError);
-            // If autoplay is blocked, wait for user interaction
             if (playError.name === 'NotAllowedError') {
               const playOnInteraction = () => {
                 videoRef.current.play()
                   .then(() => {
-                    console.log('Webcam started after user interaction');
                     document.removeEventListener('click', playOnInteraction);
                   })
                   .catch(err => console.error('Error playing after interaction:', err));
@@ -108,134 +113,21 @@ const Regie = () => {
             }
           }
         }
-
-        // Connect to signaling server
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsHost = window.location.hostname;
-        const wsPort = '4321'; // Use the correct port
-        const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}/ws`;
-        
-        console.log('Connecting to WebSocket at:', wsUrl);
-        ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
-
-        ws.onopen = () => {
-          console.log('Connected to signaling server');
-          setConnectionStatus('connecting');
-          // Register as the offerer
-          ws.send(JSON.stringify({
-            type: 'register',
-            clientId: 'regie'
-          }));
-        };
-
-        ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
-          setConnectionStatus('error');
-        };
-
-        ws.onclose = () => {
-          console.log('WebSocket connection closed');
-          setConnectionStatus('disconnected');
-        };
-
-        ws.onmessage = async (event) => {
-          console.log('Received message:', event.data);
-          try {
-            const message = JSON.parse(event.data);
-            
-            if (message.type === 'registered') {
-              console.log('Registration confirmed:', message.clientId);
-              setConnectionStatus('connected');
-            } else if (message.type === 'signal') {
-              const data = message.data;
-              if (data.type === 'answer') {
-                console.log('Received answer');
-                await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-              } else if (data.type === 'ice-candidate') {
-                console.log('Received ICE candidate');
-                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-              }
-            }
-          } catch (error) {
-            console.error('Error handling message:', error);
-          }
-        };
-
-        // Initialize WebRTC connection
-        pc = new RTCPeerConnection({
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' }
-          ]
-        });
-
-        // Add webcam tracks to the connection
-        stream.getTracks().forEach(track => {
-          console.log('Adding track:', track.kind);
-          pc.addTrack(track, stream);
-        });
-
-        // Handle ICE candidates
-        pc.onicecandidate = (event) => {
-          if (event.candidate) {
-            console.log('Sending ICE candidate');
-            ws.send(JSON.stringify({
-              type: 'signal',
-              targetId: 'show',
-              data: {
-                type: 'ice-candidate',
-                candidate: event.candidate
-              }
-            }));
-          }
-        };
-
-        pc.onconnectionstatechange = () => {
-          console.log('Connection state changed:', pc.connectionState);
-          setConnectionStatus(pc.connectionState);
-        };
-
-        pc.oniceconnectionstatechange = () => {
-          console.log('ICE connection state changed:', pc.iceConnectionState);
-        };
-
-        // Create and send offer
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        console.log('Sending offer');
-        ws.send(JSON.stringify({
-          type: 'signal',
-          targetId: 'show',
-          data: {
-            type: 'offer',
-            sdp: pc.localDescription
-          }
-        }));
-
-        peerConnectionRef.current = pc;
-
       } catch (error) {
         console.error('Error accessing webcam:', error);
-        setConnectionStatus('error');
-        // Show user-friendly error message
-        alert(`Webcam access error: ${error.message}\n\nPlease make sure:\n1. You have granted camera permissions\n2. You are using HTTPS or localhost\n3. Your camera is properly connected`);
       }
     };
 
-    startWebcam();
+    if (viewWebcam) {
+      startWebcam();
+    }
 
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
-      if (pc) {
-        pc.close();
-      }
-      if (ws) {
-        ws.close();
-      }
     };
-  }, []);
+  }, [viewWebcam]);
 
   return (
     <div style={{ 
@@ -247,7 +139,6 @@ const Regie = () => {
       fontFamily: 'Verdana'
     }}>
       <div style={{ width: '30%',height: '80%',margin: '4px', border: '1px solid #444',borderRadius: '10px',padding: '10px'}}>
-        <h1 style={{ color: '#fff', marginBottom: '30px', fontFamily: 'Verdana' }}>Acteurs</h1>
         <div style={{ 
           display: 'flex',
           flexDirection: 'column',
@@ -310,18 +201,17 @@ const Regie = () => {
                       -10
                     </button>
                     <button
-                      onClick={() => selectActor(`actor${num}`)}
+                      onClick={() => setCardVisible(`actor${num}`, !cardVisible[`actor${num}`])}
                       style={{
                         padding: '8px 16px',
                         backgroundColor: '#333',
                         color: 'white',
-                        border: 'none',
+                        border: cardVisible[`actor${num}`] ? '2px solid #4CAF50' : 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         fontSize: '14px',
                         fontWeight: 'bold',
                         transition: 'all 0.3s ease',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                         minWidth: '60px',
                         ':hover': {
                           backgroundColor: '#444'
@@ -768,32 +658,6 @@ const Regie = () => {
         </div>
       </div>
       <div style={{ width: '30%',height: '80%',margin: '4px', border: '1px solid #444',borderRadius: '10px',padding: '10px'}}>
-        <div style={{ 
-          display: 'flex',
-          justifyContent: 'center',
-          marginTop: '20px'
-        }}>
-          <button
-            style={{
-              padding: '12px 24px',
-              backgroundColor: connectionStatus === 'connected' ? '#4CAF50' : '#f44336',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              transition: 'all 0.3s ease',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-              fontFamily: 'Verdana',
-              ':hover': {
-                transform: 'scale(1.05)'
-              }
-            }}
-          >
-            {connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
-          </button>
-        </div>
         <div style={{
           marginTop: '20px',
           display: 'flex',

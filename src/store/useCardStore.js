@@ -6,6 +6,7 @@ const useCardStore = create(
     persist(
       (set) => ({
         allCardsVisible: false,
+        setAllCardsVisible: (visible) => set({ allCardsVisible: visible }),
         viewWebcam: false,
         volume: 1,
         toggleAllCards: () => set((state) => ({ allCardsVisible: !state.allCardsVisible })),
@@ -20,6 +21,16 @@ const useCardStore = create(
           actor1: 0,
           actor2: 0,
           actor3: 0
+        },
+        invited: {
+          actor1: false,
+          actor2: false,
+          actor3: false
+        },
+        cardVisible: {
+          actor1: false,
+          actor2: false,
+          actor3: false
         },
         selectedCategories: {},
         setSelectedCategory: (index, category) => set((state) => ({
@@ -36,31 +47,39 @@ const useCardStore = create(
             [actor]: value
           }
         })),
+        setInvited: (actor, value) => set((state) => ({
+          invited: {
+            ...state.invited,
+            [actor]: value
+          }
+        })),
         updateScore: (actor, value) => set((state) => ({
           scores: {
             ...state.scores,
             [actor]: state.scores[actor] + value
           }
         })),
-        selectActor: (actor) => set((state) => ({
-          selectedActor: actor
-        }))
+        // selectedActor: 'toto',
+        setCardVisible: (actor, value) => set((state) => ({
+          cardVisible: {
+            ...state.cardVisible,
+            [actor]: value
+          }
+        })),
       }),
       {
         name: 'card-storage',
-        onRehydrateStorage: () => {
+        onRehydrateStorage: () => (state) => {
           if (typeof window !== 'undefined') {
             window.addEventListener('storage', (e) => {
               if (e.key === 'card-storage') {
                 const newState = JSON.parse(e.newValue);
                 useCardStore.setState({
-                  allCardsVisible: newState.state.allCardsVisible,
-                  viewWebcam: newState.state.viewWebcam,
-                  volume: newState.state.volume,
-                  actors: newState.state.actors,
+                  ...newState.state,
                   scores: newState.state.scores,
                   selectedCategories: newState.state.selectedCategories,
-                  currentStepName: newState.state.currentStepName
+                  currentStepName: newState.state.currentStepName,
+                  selectedActor: newState.state.selectedActor || 'toto'
                 });
               }
             });
@@ -76,7 +95,6 @@ if (typeof window !== 'undefined') {
   useCardStore.subscribe(
     (state) => state.actors,
     (actors) => {
-      // Force update all components using the store
       useCardStore.setState({ actors });
     }
   );
@@ -96,6 +114,12 @@ if (typeof window !== 'undefined') {
     (state) => state.currentStepName,
     (currentStepName) => {
       useCardStore.setState({ currentStepName });
+    }
+  );
+  useCardStore.subscribe(
+    (state) => state.selectedActor,
+    (selectedActor) => {
+      useCardStore.setState({ selectedActor });
     }
   );
 }

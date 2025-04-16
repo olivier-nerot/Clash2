@@ -1,7 +1,7 @@
 # large files
-/public/assets/movies/*
-/public/assets/music/*
-/public/assets/pictures/*
+/public/movies/*
+/public/music/*
+/public/pictures/*
 
 # dependencies
 /node_modules
