@@ -246,7 +246,31 @@ const Regie = () => {
 									borderBottom: "1px solid #444",
 								}}
 							>
-								<div>
+								{/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
+								<div
+									onClick={() =>
+										setCardVisible(`actor${num}`, !cardVisible[`actor${num}`])
+									}
+									style={{
+										padding: "8px 16px",
+										backgroundColor: "#333",
+										color: "white",
+										borderWidth: "2px",
+										borderStyle: "solid",
+										borderColor: cardVisible[`actor${num}`]
+											? "#4CAF50"
+											: "#000000",
+										borderRadius: "4px",
+										cursor: "pointer",
+										fontSize: "14px",
+										fontWeight: "bold",
+										transition: "all 0.3s ease",
+										minWidth: "60px",
+										":hover": {
+											backgroundColor: "#444",
+										},
+									}}
+								>
 									<h2>{actors[`actor${num}`]}</h2>
 								</div>
 								<div
@@ -310,28 +334,15 @@ const Regie = () => {
 										</button>
 										<button
 											type="button"
-											onClick={() =>
-												setCardVisible(
-													`actor${num}`,
-													!cardVisible[`actor${num}`],
-												)
-											}
 											style={{
 												padding: "8px 16px",
 												backgroundColor: "#333",
 												color: "white",
-												border: cardVisible[`actor${num}`]
-													? "2px solid #4CAF50"
-													: "none",
+												border: "none",
 												borderRadius: "4px",
-												cursor: "pointer",
 												fontSize: "14px",
 												fontWeight: "bold",
-												transition: "all 0.3s ease",
 												minWidth: "60px",
-												":hover": {
-													backgroundColor: "#444",
-												},
 											}}
 										>
 											{scores[`actor${num}`]}

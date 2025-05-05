@@ -35,7 +35,6 @@ const Show = () => {
 		currentStepName,
 		volume,
 		viewWebcam,
-		setCardVisible,
 		cardVisible,
 		clashN,
 		incClashN,
@@ -202,6 +201,10 @@ const Show = () => {
 		};
 
 		if (viewWebcam) {
+			audio = new Audio("/music/Gong.mp3");
+			audio.volume = volume;
+			audio.play();
+
 			startWebcam();
 		}
 
@@ -224,6 +227,80 @@ const Show = () => {
 			return;
 		}
 
+		// Utilitaires HSV <-> RGB
+		function rgbToHsv(r, g, b) {
+			const rNorm = r / 255;
+			const gNorm = g / 255;
+			const bNorm = b / 255;
+			const max = Math.max(rNorm, gNorm, bNorm);
+			const min = Math.min(rNorm, gNorm, bNorm);
+			let h;
+			let s;
+			const v = max;
+			const d = max - min;
+			s = max === 0 ? 0 : d / max;
+			if (max === min) {
+				h = 0;
+			} else {
+				switch (max) {
+					case rNorm:
+						h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0);
+						break;
+					case gNorm:
+						h = (bNorm - rNorm) / d + 2;
+						break;
+					case bNorm:
+						h = (rNorm - gNorm) / d + 4;
+						break;
+				}
+				h = h / 6;
+			}
+			return [h, s, v];
+		}
+		function hsvToRgb(h, s, v) {
+			let r;
+			let g;
+			let b;
+			const i = Math.floor(h * 6);
+			const f = h * 6 - i;
+			const p = v * (1 - s);
+			const q = v * (1 - f * s);
+			const t = v * (1 - (1 - f) * s);
+			switch (i % 6) {
+				case 0:
+					r = v;
+					g = t;
+					b = p;
+					break;
+				case 1:
+					r = q;
+					g = v;
+					b = p;
+					break;
+				case 2:
+					r = p;
+					g = v;
+					b = t;
+					break;
+				case 3:
+					r = p;
+					g = q;
+					b = v;
+					break;
+				case 4:
+					r = t;
+					g = p;
+					b = v;
+					break;
+				case 5:
+					r = v;
+					g = p;
+					b = q;
+					break;
+			}
+			return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+		}
+
 		const drawFrame = () => {
 			if (video.videoWidth && video.videoHeight) {
 				if (
@@ -238,61 +315,24 @@ const Show = () => {
 
 				const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 				const data = imageData.data;
-				const width = canvas.width;
-				const height = canvas.height;
 
-				// First pass: posterize to three levels
+				// Posterization: 12 saturated colors (rainbow palette)
 				for (let i = 0; i < data.length; i += 4) {
-					const gray =
-						0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-
-					let level;
-					if (gray <= 60) {
-						// Reduced dark threshold (was 85)
-						level = 0; // Black
-					} else if (gray <= 140) {
-						// Reduced mid threshold (was 170)
-						level = 128; // Grey
-					} else {
-						// Increased white zone
-						level = 255; // White
-					}
-
-					data[i] = level; // R
-					data[i + 1] = level; // G
-					data[i + 2] = level; // B
-				}
-
-				// Second pass: detect and draw edges in red
-				const tempData = new Uint8ClampedArray(data);
-				for (let y = 1; y < height - 1; y++) {
-					for (let x = 1; x < width - 1; x++) {
-						const idx = (y * width + x) * 4;
-
-						// Check neighboring pixels
-						const current = data[idx];
-						const left = data[idx - 4];
-						const right = data[idx + 4];
-						const top = data[idx - width * 4];
-						const bottom = data[idx + width * 4];
-
-						// If any neighboring pixel is different, this is an edge
-						if (
-							current !== left ||
-							current !== right ||
-							current !== top ||
-							current !== bottom
-						) {
-							tempData[idx] = 255; // R (red)
-							tempData[idx + 1] = 0; // G
-							tempData[idx + 2] = 0; // B
-						}
-					}
-				}
-
-				// Apply the edge detection result
-				for (let i = 0; i < data.length; i++) {
-					data[i] = tempData[i];
+					const r = data[i];
+					const g = data[i + 1];
+					const b = data[i + 2];
+					const hsv = rgbToHsv(r, g, b);
+					let h = hsv[0];
+					let s = hsv[1];
+					let v = hsv[2];
+					// Quantize hue to 12 steps
+					h = Math.round(h * 12) / 12;
+					s = hsv[1] ** 0.1;
+					v = hsv[2] ** 0.3;
+					const rgb = hsvToRgb(h, s, v);
+					data[i] = rgb[0];
+					data[i + 1] = rgb[1];
+					data[i + 2] = rgb[2];
 				}
 
 				ctx.putImageData(imageData, 0, 0);
@@ -366,8 +406,8 @@ const Show = () => {
 					position: "absolute",
 					top: "50%",
 					left: "50%",
-					width: "700px",
-					height: "700px",
+					width: "800px",
+					height: "800px",
 					opacity: viewWebcam ? "1" : "0",
 					transition: "opacity 2s ease",
 					transform: "translate(-50%, -50%)",
@@ -375,7 +415,7 @@ const Show = () => {
 					borderRadius: "50%",
 					overflow: "hidden",
 					border: "4px solid #F00",
-					boxShadow: "0 0 100px rgba(255, 0, 0, 1)",
+					boxShadow: "0 0 100px rgba(0, 0, 0, 1)",
 					display: "flex",
 					alignItems: "center",
 					justifyContent: "center",
@@ -534,7 +574,7 @@ const Show = () => {
 							<figure
 								style={{
 									position: "absolute",
-									top: -80,
+									top: -100,
 									left: 0,
 									right: 0,
 									bottom: 0,
