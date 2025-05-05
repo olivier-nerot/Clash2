@@ -26,7 +26,6 @@ export const categories = [
     {name:'Say my name'},
     {name:'Bachelor'},
     {name:'My arm is a tree'},
-    {name:'If you know what I mean'},
     {name:'Can you feel it'},
     {name:'You fucked me up'},
     {name:'You are not alone'},
@@ -39,5 +38,4 @@ export const categories = [
     {name:'Monkeys'},
     {name:'Oops ! I did it again'},
     {name:'Fucking Resolution'},
-    {name:'CLASH PUBLIC !!'},
 ]
