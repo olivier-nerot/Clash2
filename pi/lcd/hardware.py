@@ -26,6 +26,8 @@ SPI_BUS = 0
 SPI_DEV = 0  # CE0 / GPIO8
 SPI_HZ = 32_000_000
 GPIOCHIP = 0
+# Rotation de l'affichage (degrés horaires) : 0, 90, 180 ou 270.
+DISPLAY_ROTATE_CW = 90
 BUTTONS = {
     "up": 6,
     "down": 19,
@@ -97,6 +99,14 @@ class RealBackend:
 
     def show(self, image):
         np = self._np
+        from PIL import Image as _Image
+        _ROT = {
+            90: _Image.ROTATE_270,   # 90° horaire
+            180: _Image.ROTATE_180,
+            270: _Image.ROTATE_90,
+        }
+        if DISPLAY_ROTATE_CW in _ROT:
+            image = image.transpose(_ROT[DISPLAY_ROTATE_CW])
         if image.size != (WIDTH, HEIGHT):
             image = image.resize((WIDTH, HEIGHT))
         arr = np.asarray(image.convert("RGB"), dtype=np.uint16)
