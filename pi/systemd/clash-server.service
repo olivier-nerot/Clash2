@@ -1,0 +1,15 @@
+[Unit]
+Description=Clash - serveur Node (HTTP + WebSocket, état autoritatif)
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Clash2
+Environment=PORT=3000
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

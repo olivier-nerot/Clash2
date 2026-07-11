@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import useCardStore from "../store/useCardStore";
 import { categories } from "../setup/categories";
-
-let timerInterval;
 
 const Regie = () => {
 	const {
@@ -20,19 +18,21 @@ const Regie = () => {
 		cardVisible,
 		setCardVisible,
 		clashN,
-		setClashN,
 		countdown,
-		setCountdown,
-		decCountdown,
 		numDropdowns,
 		addCategory,
 		catChecked,
 		setCatChecked,
+		// séquenceur + effets, désormais pilotés côté serveur
+		isRunning,
+		nextStep,
+		isLoveRunning,
+		toggleStart,
+		next,
+		toggleLove,
+		toggleAllCards,
 	} = useCardStore();
 	const videoRef = useRef(null);
-	const [isRunning, setIsRunning] = useState(false);
-	const [nextStep, setNextStep] = useState(-1);
-	const [isLoveRunning, setIsLoveRunning] = useState(false);
 
 	const handleActorChange = (e, actor) => {
 		setActor(actor, e.target.value);
@@ -41,105 +41,6 @@ const Regie = () => {
 	const handleCategoryChange = (e, index) => {
 		setSelectedCategory(index, e.target.value);
 	};
-
-	const toggleAllCards = () => {
-		setTimeout(
-			() => setCardVisible("actor1", !cardVisible.actor1),
-			Math.floor(Math.random() * 2000),
-		);
-		setTimeout(
-			() => setCardVisible("actor2", !cardVisible.actor2),
-			Math.floor(Math.random() * 2000),
-		);
-		setTimeout(
-			() => setCardVisible("actor3", !cardVisible.actor3),
-			Math.floor(Math.random() * 2000),
-		);
-	};
-
-	const handleNextCategory = () => {
-		setVolume(1);
-
-		setCardVisible("actor1", false);
-		setCardVisible("actor2", false);
-		setCardVisible("actor3", false);
-
-		const index = nextStep;
-
-		if (index === numDropdowns * 3 + 2) {
-			setClashN(0);
-			setIsRunning(false);
-			return;
-		}
-
-		const nextIndex = index + 1;
-		if (nextIndex === 0) {
-			setCurrentStepName("Generique");
-		} else if (nextIndex === numDropdowns * 3 + 1) {
-			setCurrentStepName("Clash public");
-		} else if (nextIndex === numDropdowns * 3 + 2) {
-			setCurrentStepName("Generique FIN");
-		} else if (nextIndex % 3 === 1) {
-			setCurrentStepName(
-				`Category : ${selectedCategories[Math.floor(nextIndex / 3)]}`,
-			);
-		} else if (nextIndex % 3 === 2) {
-			setCurrentStepName("Applaudimetre");
-			setTimeout(() => setCardVisible("actor3", true), 3000);
-			setTimeout(() => setCardVisible("actor3", false), 9000);
-			setTimeout(() => setCardVisible("actor2", true), 8000);
-			setTimeout(() => setCardVisible("actor2", false), 15000);
-			setTimeout(() => setCardVisible("actor1", true), 14000);
-			setTimeout(() => setCardVisible("actor1", false), 19000);
-		} else if (nextIndex % 3 === 0) {
-			setCurrentStepName("Roue");
-		}
-
-		// start countdown
-		if (nextIndex === 1) {
-			timerInterval = setInterval(() => {
-				decCountdown();
-			}, 1000);
-		}
-
-		setNextStep(nextIndex);
-	};
-
-	const startClash = () => {
-		// will stop
-		if (isRunning) {
-			setNextStep(-1);
-			setCountdown(59 * 60 + 27);
-			if (timerInterval) {
-				clearInterval(timerInterval);
-			}
-			setCurrentStepName("stop");
-		}
-
-		// will start
-		if (!isRunning) {
-			updateScore("actor1", -scores.actor1);
-			updateScore("actor2", -scores.actor2);
-			updateScore("actor3", -scores.actor3);
-			setClashN(1);
-			setNextStep(0);
-			setCountdown(59 * 60 + 27);
-			setCurrentStepName("Generique");
-		}
-
-		setIsRunning(!isRunning);
-	};
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-	useEffect(() => {
-		if (countdown === 0) {
-			console.log("endClash");
-			clearInterval(timerInterval);
-			// go before clash public
-			setNextStep(numDropdowns * 3);
-			setCurrentStepName("Alarm");
-		}
-	}, [countdown]);
 
 	// Handle webcam stream
 	useEffect(() => {
@@ -440,7 +341,7 @@ const Regie = () => {
 				>
 					<button
 						type="button"
-						onClick={() => startClash()}
+						onClick={toggleStart}
 						style={{
 							padding: "12px 24px",
 							backgroundColor: isRunning ? "#f44336" : "#4CAF50",
@@ -474,7 +375,7 @@ const Regie = () => {
 					</div>
 					<button
 						type="button"
-						onClick={handleNextCategory}
+						onClick={next}
 						disabled={!isRunning}
 						style={{
 							padding: "12px 24px",
@@ -1028,10 +929,7 @@ const Regie = () => {
 						</button>
 						<button
 							type="button"
-							onClick={() => {
-								setCurrentStepName(isLoveRunning ? "stop love" : "play love");
-								setIsLoveRunning(!isLoveRunning);
-							}}
+							onClick={toggleLove}
 							style={{
 								width: "200px",
 								padding: "8px 16px",

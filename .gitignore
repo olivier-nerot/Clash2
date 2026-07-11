@@ -15,6 +15,13 @@
 /build
 /dist
 
+# runtime state (état autoritatif persisté du serveur)
+/server/state.json
+
+# contrôleur LCD Python
+__pycache__/
+pi/lcd/venv/
+
 # misc
 .DS_Store
 .env.local

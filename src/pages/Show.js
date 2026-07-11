@@ -614,7 +614,6 @@ const Show = () => {
 					{new Date(countdown * 1000).toISOString().substr(14, 5)}
 				</div>
 			)}
-			TOTO
 		</div>
 	);
 };

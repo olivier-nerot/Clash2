@@ -1,0 +1,19 @@
+[Unit]
+Description=Clash - kiosk Chromium (sortie HDMI, vue /show)
+After=clash-server.service systemd-user-sessions.service
+Requires=clash-server.service
+
+[Service]
+Type=simple
+User=pi
+# Session graphique minimale via cage (compositeur Wayland kiosk) sur tty1.
+PAMName=login
+TTYPath=/dev/tty1
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+ExecStartPre=/home/pi/Clash2/pi/wait-for-server.sh
+ExecStart=/usr/bin/cage -s -- /home/pi/Clash2/pi/kiosk.sh
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
