@@ -27,10 +27,17 @@ git lfs pull || echo "  (pas de LFS — les médias sont copiés à part, cf REA
 # Normalise la casse des extensions (.MP4 -> .mp4) : requis sur ext4 sensible à la casse.
 bash pi/normalize-media.sh public || true
 
-echo "== 4/7 Build du front React =="
-npm install
-# react-scripts + Node >= 17 : provider OpenSSL legacy nécessaire au build.
-NODE_OPTIONS=--openssl-legacy-provider CI=false npm run build
+echo "== 4/7 Front React =="
+if [ -f build/index.html ]; then
+	# build/ déjà fourni (ex. copié depuis une autre machine) : sur un Pi3 le build
+	# webpack peut manquer de RAM. On installe seulement les deps runtime du serveur.
+	echo "  build/ présent -> deps runtime uniquement (express, ws)"
+	npm install --no-save express ws
+else
+	npm install
+	# react-scripts + Node >= 17 : provider OpenSSL legacy nécessaire au build.
+	NODE_OPTIONS=--openssl-legacy-provider CI=false npm run build
+fi
 
 echo "== 5/7 Environnement Python du contrôleur LCD =="
 python3 -m venv pi/lcd/venv
