@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Installation autonome de Clash sur Raspberry Pi OS (Bookworm).
-# Suppose le dépôt cloné dans /home/pi/Clash2 (adapter REPO sinon).
+# Indépendant du nom d'utilisateur : le dépôt est supposé dans ~/Clash2.
 set -e
 
-REPO="${CLASH_REPO:-/home/pi/Clash2}"
+REPO="${CLASH_REPO:-$HOME/Clash2}"
+RUNUSER="$(id -un)"
+RUNUID="$(id -u)"
 cd "$REPO"
 
 echo "== 1/7 Paquets système =="
@@ -33,10 +35,14 @@ python3 -m venv pi/lcd/venv
 pi/lcd/venv/bin/pip install --upgrade pip
 pi/lcd/venv/bin/pip install -r pi/lcd/requirements.txt
 
-echo "== 6/7 Services systemd =="
-sudo cp pi/systemd/clash-server.service /etc/systemd/system/
-sudo cp pi/systemd/clash-kiosk.service /etc/systemd/system/
-sudo cp pi/systemd/clash-lcd.service /etc/systemd/system/
+echo "== 6/7 Services systemd (adaptés à l'utilisateur $RUNUSER) =="
+# Substitue user / chemin du dépôt / uid dans les templates (qui utilisent pi / /home/pi/Clash2 / 1000).
+for svc in clash-server clash-kiosk clash-lcd; do
+	sed -e "s#/home/pi/Clash2#$REPO#g" \
+		-e "s#^User=pi#User=$RUNUSER#" \
+		-e "s#/run/user/1000#/run/user/$RUNUID#g" \
+		"pi/systemd/$svc.service" | sudo tee "/etc/systemd/system/$svc.service" >/dev/null
+done
 sudo systemctl daemon-reload
 sudo systemctl enable clash-server.service clash-kiosk.service clash-lcd.service
 
