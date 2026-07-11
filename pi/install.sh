@@ -13,7 +13,7 @@ sudo apt-get update
 sudo apt-get install -y \
 	nodejs npm git git-lfs \
 	cage \
-	python3-venv python3-pip \
+	python3-venv python3-pip python3-lgpio \
 	fonts-dejavu-core curl
 # Chromium : nom du paquet variable selon la distribution (chromium / chromium-browser).
 sudo apt-get install -y chromium || sudo apt-get install -y chromium-browser
@@ -40,7 +40,8 @@ else
 fi
 
 echo "== 5/7 Environnement Python du contrôleur LCD =="
-python3 -m venv pi/lcd/venv
+# --system-site-packages : le venv voit lgpio (paquet système python3-lgpio).
+python3 -m venv --system-site-packages pi/lcd/venv
 pi/lcd/venv/bin/pip install --upgrade pip
 pi/lcd/venv/bin/pip install -r pi/lcd/requirements.txt
 

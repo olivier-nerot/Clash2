@@ -7,6 +7,7 @@ Requires=clash-server.service
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/Clash2/pi/lcd
+Environment=PYTHONUNBUFFERED=1
 Environment=CLASH_WS_URL=ws://localhost:3000
 Environment=CLASH_REGIE_URL=192.168.4.1:3000/regie
 ExecStart=/home/pi/Clash2/pi/lcd/venv/bin/python main.py

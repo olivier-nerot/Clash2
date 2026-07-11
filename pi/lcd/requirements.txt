@@ -3,5 +3,8 @@ Pillow>=10.0.0
 websocket-client>=1.6.0
 
 # Matériel (Raspberry Pi uniquement — non requis pour le mode mock/dev) :
-st7789>=0.0.4 ; platform_machine == "armv7l" or platform_machine == "aarch64"
-gpiozero>=2.0 ; platform_machine == "armv7l" or platform_machine == "aarch64"
+# Driver ST7789 maison via spidev + lgpio (la lib PyPI st7789 a un contrôle GPIO
+# cassé sur Pi3/Trixie). lgpio provient du paquet système python3-lgpio, visible
+# grâce au venv créé avec --system-site-packages (cf pi/install.sh).
+spidev>=3.6 ; platform_machine == "armv7l" or platform_machine == "aarch64"
+numpy>=1.24 ; platform_machine == "armv7l" or platform_machine == "aarch64"
