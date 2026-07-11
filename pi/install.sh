@@ -12,9 +12,11 @@ echo "== 1/7 Paquets système =="
 sudo apt-get update
 sudo apt-get install -y \
 	nodejs npm git git-lfs \
-	chromium-browser cage \
+	cage \
 	python3-venv python3-pip \
-	fonts-dejavu curl
+	fonts-dejavu-core curl
+# Chromium : nom du paquet variable selon la distribution (chromium / chromium-browser).
+sudo apt-get install -y chromium || sudo apt-get install -y chromium-browser
 
 echo "== 2/7 Activation SPI (écran ST7789) =="
 sudo raspi-config nonint do_spi 0 || true
