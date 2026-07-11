@@ -39,16 +39,39 @@ Régie WiFi (téléphone) ───────┘        état + state machine 
 
 ## Installation
 
+Sur le Pi (via Ethernet, `ssh pi@clash.local`) :
+
 ```bash
-git clone <repo> /home/pi/Clash2
-cd /home/pi/Clash2
-bash pi/install.sh
-sudo -E bash pi/setup-ap.sh   # crée le WiFi (coupe le WiFi client !)
+git clone https://github.com/olivier-nerot/Clash2.git ~/Clash2
+```
+
+Depuis le Mac, copier les médias (hors git) — ex. depuis une copie existante :
+
+```bash
+rsync -av --progress \
+  "/chemin/vers/public/movies" "/chemin/vers/public/music" \
+  pi@clash.local:~/Clash2/public/
+```
+
+Puis sur le Pi :
+
+```bash
+bash ~/Clash2/pi/install.sh
+sudo -E bash ~/Clash2/pi/setup-ap.sh   # crée le WiFi (coupe le WiFi client !) — en dernier
 sudo reboot
 ```
 
-`install.sh` : paquets système, activation SPI, `git lfs pull`, build React, venv
-Python du LCD, copie + activation des services systemd.
+`install.sh` : paquets système, activation SPI, **normalisation de la casse des
+médias** (`.MP4` → `.mp4`, requis sur ext4), build React, venv Python du LCD,
+copie + activation des services systemd.
+
+> **Casse des fichiers** : le code référence des `.mp4`/`.mp3` en minuscules.
+> `pi/normalize-media.sh` (appelé par `install.sh`) renomme les extensions
+> majuscules — sinon 404 sur le Pi (contrairement à macOS, insensible à la casse).
+>
+> **Manquant connu** : `Applaudimetre20.mp4` est absent du jeu de médias ; l'étape
+> Applaudimètre tire au hasard dans 1..30, donc ~1 fois sur 30 la vidéo manquera.
+> Dupliquer un autre Applaudimetre en `Applaudimetre20.mp4` si besoin.
 
 ## Utilisation du contrôleur LCD
 

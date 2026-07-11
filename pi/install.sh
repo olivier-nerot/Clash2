@@ -17,9 +17,11 @@ sudo apt-get install -y \
 echo "== 2/7 Activation SPI (écran ST7789) =="
 sudo raspi-config nonint do_spi 0 || true
 
-echo "== 3/7 Assets média (Git LFS) =="
-git lfs install
-git lfs pull || echo "  (git lfs pull a échoué — copier public/movies et public/music manuellement)"
+echo "== 3/7 Assets média =="
+git lfs install || true
+git lfs pull || echo "  (pas de LFS — les médias sont copiés à part, cf README-pi.md)"
+# Normalise la casse des extensions (.MP4 -> .mp4) : requis sur ext4 sensible à la casse.
+bash pi/normalize-media.sh public || true
 
 echo "== 4/7 Build du front React =="
 npm install
