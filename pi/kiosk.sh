@@ -28,6 +28,7 @@ exec "$CHROME" \
 	--enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL \
 	--ignore-gpu-blocklist \
 	--enable-accelerated-video-decode \
+	--disable-gpu-sandbox \
 	--check-for-update-interval=31536000 \
 	--ozone-platform=wayland \
 	"$URL"
