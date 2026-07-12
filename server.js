@@ -15,7 +15,8 @@ function loadPersisted() {
 		const raw = fs.readFileSync(STATE_FILE, "utf8");
 		const data = JSON.parse(raw);
 		// On ne restaure jamais un séquenceur "en cours" : pas de timer actif au boot.
-		return { ...data, isRunning: false, nextStep: -1 };
+		// Au démarrage, on affiche toujours l'écran d'accueil (pas l'étape résiduelle).
+		return { ...data, isRunning: false, nextStep: -1, currentStepName: "welcome" };
 	} catch {
 		return undefined;
 	}

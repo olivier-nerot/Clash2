@@ -17,7 +17,7 @@ const createInitialState = () => ({
 	cardVisible: { actor1: true, actor2: true, actor3: true },
 	catChecked: { actor1: false, actor2: false, actor3: false },
 	selectedCategories: {},
-	currentStepName: "Generique",
+	currentStepName: "welcome",
 	// séquenceur (auparavant état local de Regie.js)
 	isRunning: false,
 	nextStep: -1,

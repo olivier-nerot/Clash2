@@ -140,6 +140,9 @@ const Show = () => {
 			}
 		} else if (currentStepName === "stop") {
 			bgVideoRef.current.pause();
+		} else if (currentStepName === "welcome") {
+			// écran d'accueil : aucune vidéo de fond
+			if (bgVideoRef.current) bgVideoRef.current.pause();
 		}
 
 		if (!videoPath) {
@@ -594,6 +597,46 @@ const Show = () => {
 					</div>
 				))}
 			</div>
+			{currentStepName === "welcome" && (
+				<div
+					style={{
+						position: "absolute",
+						top: 0,
+						left: 0,
+						width: "100%",
+						height: "100%",
+						backgroundColor: "#000",
+						zIndex: 5,
+						display: "flex",
+						flexDirection: "column",
+						alignItems: "center",
+						justifyContent: "center",
+						gap: "40px",
+					}}
+				>
+					<div
+						style={{
+							fontFamily: "Bison",
+							fontSize: "220px",
+							lineHeight: 1,
+							color: "#f80010",
+							textShadow: "0 0 40px rgba(248,0,16,0.6)",
+						}}
+					>
+						CLASH
+					</div>
+					<div
+						style={{
+							fontFamily: "Sarpanch",
+							fontSize: "34px",
+							color: "#eee",
+							textAlign: "center",
+						}}
+					>
+						Régie&nbsp;: 192.168.4.1:3000/regie
+					</div>
+				</div>
+			)}
 			{showCountdown && (
 				<div
 					style={{
