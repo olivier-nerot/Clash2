@@ -25,6 +25,9 @@ exec "$CHROME" \
 	--no-first-run \
 	--autoplay-policy=no-user-gesture-required \
 	--use-fake-ui-for-media-stream \
+	--enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL \
+	--ignore-gpu-blocklist \
+	--enable-accelerated-video-decode \
 	--check-for-update-interval=31536000 \
 	--ozone-platform=wayland \
 	"$URL"
