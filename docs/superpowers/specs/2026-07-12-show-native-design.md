@@ -77,9 +77,9 @@ Déclenché sur changement de `currentStepName`. Chemins servis par le serveur s
 | `currentStepName` | Fond vidéo | Audio | Texte / effet |
 |---|---|---|---|
 | `welcome` | aucun | — | écran d'accueil (CLASH + URL Régie) |
-| `Generique` | `01-Intro Clash.mp4` | — | cartes selon `cardVisible` |
+| `Generique` | `01-Intro Clash.mp4` | — | **cartes masquées** |
 | `Generique FIN` | `05-finclash.mp4` | — | — |
-| `Applaudimetre` | `Applaudimetre{1..30}.mp4` (aléatoire) | — | — |
+| `Applaudimetre` | `Applaudimetre{1..30}.mp4` (aléatoire) | — | **cartes affichées une par une** (chorégraphie serveur) |
 | `Roue` | `Roue {valeur}.mp4` (valeur ∈ roue) | — | si `valeur=="fuck"` : après 8 s, `randomFuck()` |
 | `Category : X` | `02-Annonce categorie.mp4` | `C{clashN+1}.mp3` | affiche `X` après 3 s ; countdown ON ; `incClashN()` |
 | `Clash public` | `02-Annonce categorie.mp4` | `suspens.mp3` | « CLASH PUBLIC !!!! » après 3 s ; countdown OFF |
@@ -103,6 +103,12 @@ Données portées :
 Cartes : avatar = `avatar-{num}.mp4`, ou `avatar-CAT.mp4` si `catChecked[actorN]`.
 Barre de score rouge, hauteur `100 + score` px (échelle à adapter au natif).
 `cardVisible[actorN]` pilote apparition/disparition (fondu/glissement).
+
+**Visibilité des cartes (piloté serveur, l'app native reflète `cardVisible`)** :
+- **Générique** : cartes masquées → petit ajustement du séquenceur serveur : `toggleStart`
+  (branche start) met `cardVisible` des 3 acteurs à `false`. Bénéficie aussi au Show web.
+- **Applaudimètre** : cartes affichées **une par une** — chorégraphie **déjà** présente dans
+  le `next()` serveur (actor3 à 3 s, actor2 à 8 s, actor1 à 14 s, masquées entre-temps).
 
 ## Risque de performance et dé-risquage
 
