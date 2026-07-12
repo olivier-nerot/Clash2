@@ -66,8 +66,10 @@ wss.on("connection", (ws) => {
 	});
 });
 
-// --- Fichiers statiques du build React ---
+// --- Fichiers statiques ---
 app.use(express.static(path.join(__dirname, "build")));
+// Médias (public/movies, public/music) : hors build, servis directement depuis public/.
+app.use(express.static(path.join(__dirname, "public")));
 app.get("*", (req, res) => {
 	res.sendFile(path.join(__dirname, "build", "index.html"));
 });
