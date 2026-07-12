@@ -16,6 +16,7 @@ else
 fi
 
 exec "$CHROME" \
+	${CLASH_KIOSK_DEBUG:+--remote-debugging-port=9222 --remote-allow-origins=*} \
 	--kiosk \
 	--start-fullscreen \
 	--noerrdialogs \
