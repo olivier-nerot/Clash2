@@ -516,30 +516,34 @@ const Show = () => {
 							position: "relative",
 							overflow: "hidden",
 							boxShadow: "0 0 40px rgba(255,255,255,0.8)",
-							display: cardVisible[`actor${num}`] ? "block" : "hidden",
+							display: cardVisible[`actor${num}`] ? "block" : "none",
 							width: cardVisible[`actor${num}`] ? "260px" : "0px",
 						}}
 					>
-						<video
-							loop
-							src={
-								catChecked[`actor${num}`]
-									? "/movies/avatar-CAT.mp4"
-									: `/movies/avatar-${num}.mp4`
-							}
-							preload="auto"
-							autoPlay
-							muted
-							playsInline
-							style={{
-								width: "100%",
-								height: "100%",
-								objectFit: "cover",
-								position: "absolute",
-								top: 0,
-								left: 0,
-							}}
-						/>
+						{/* La vidéo avatar n'est montée (et décodée) que si la carte est
+						    visible : sur Pi3, décoder des flux cachés vole le CPU du fond. */}
+						{cardVisible[`actor${num}`] && (
+							<video
+								loop
+								src={
+									catChecked[`actor${num}`]
+										? "/movies/avatar-CAT.mp4"
+										: `/movies/avatar-${num}.mp4`
+								}
+								preload="auto"
+								autoPlay
+								muted
+								playsInline
+								style={{
+									width: "100%",
+									height: "100%",
+									objectFit: "cover",
+									position: "absolute",
+									top: 0,
+									left: 0,
+								}}
+							/>
+						)}
 						<div
 							style={{
 								position: "absolute",
