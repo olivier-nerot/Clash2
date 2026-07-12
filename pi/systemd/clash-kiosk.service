@@ -14,6 +14,9 @@ ExecStartPre=/home/pi/Clash2/pi/wait-for-server.sh
 ExecStart=/usr/bin/cage -s -- /home/pi/Clash2/pi/kiosk.sh
 Restart=always
 RestartSec=3
+# cage ignore SIGTERM : on force le kill rapidement pour ne pas bloquer 90s au stop/restart.
+TimeoutStopSec=5
+KillMode=mixed
 
 [Install]
 WantedBy=multi-user.target
